@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 JSON = dict[str, Any]
 Code = int
 Message = str
+Response = (JSON, Code, Message)
 
 
 class Status(Enum):
@@ -22,21 +23,21 @@ class Status(Enum):
     RATE_LIMIT_EXCEEDED = 429
 
     @staticmethod
-    def has(code: int):
+    def has(code: Code):
         return any(status.value == code for status in Status)
 
-    def to_message(self):
+    def get_message(self):
         return {
             Status.OK: 'OK',
             Status.RATE_LIMIT_EXCEEDED: 'Too Many Requests',
         }[self]
 
+    def match(self, code: Code, message: Message):
+        return self.value == code and self.get_message() == message
+
     @staticmethod
-    def are_valid(code: int, message: str):
-        return Status.has(code) and Status(code).to_message() == message
-
-
-Response = (JSON, Code, Message)
+    def are_valid(code: Code, message: Message):
+        return Status.has(code) and Status(code).get_message() == message
 
 
 class Cooldown:
@@ -118,7 +119,7 @@ class BaseAPI(ABC):
 
             except ClientResponseError as e:
 
-                if e.status == Status.RATE_LIMIT_EXCEEDED.value and e.message == Status(e.status).to_message():
+                if e.status == Status.RATE_LIMIT_EXCEEDED.value and e.message == Status(e.status).get_message():
                     if self.cooldown:
                         logger.warning(f'{e.message} ({self.base_url}) - Going to sleep for {self.cooldown.get()}')
                         await sleep(self.cooldown.make())

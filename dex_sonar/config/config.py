@@ -9,8 +9,10 @@ config = Config()
 config.read('config.ini')
 config.read('dev.ini')
 
+
 TESTING_MODE = config.getboolean('Bot', 'testing_mode')
 NOT_TESTING_MODE = not TESTING_MODE
+
 
 if TESTING_MODE:
     config.read('testing.ini')
